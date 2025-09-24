@@ -71,6 +71,7 @@ Watchlists sind JSON-Dateien, die entweder eine Liste oder ein Objekt enthalten 
 
 Relative Pfade werden relativ zum Speicherort der Watchlist aufgelöst.
 
+
 ## Schnellstart
 
 Für einen schnellen Start ohne weitere Parameter kann die Anwendung direkt
