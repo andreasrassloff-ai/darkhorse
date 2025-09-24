@@ -71,6 +71,18 @@ Watchlists sind JSON-Dateien, die entweder eine Liste oder ein Objekt enthalten 
 
 Relative Pfade werden relativ zum Speicherort der Watchlist aufgelöst.
 
+
+## Schnellstart
+
+Für einen schnellen Start ohne weitere Parameter kann die Anwendung direkt
+gestartet werden. Dabei wird die Standard-Watchlist aus
+`watchlists/beobachtungsliste.json` geladen und die Weboberfläche auf Port 8000
+bereitgestellt:
+
+```
+python -m app
+```
+
 ## Kommandozeilenoberfläche
 
 Die CLI liest historische Daten ein, prüft ob genügend Historie vorliegt und gibt anschließend eine Empfehlung samt Begründung aus.
