@@ -18,7 +18,7 @@ from .defaults import (
 
 from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
 
-from .recommender import analyse_asset
+from .recommender import Recommendation, analyse_asset
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -98,6 +98,23 @@ def _log_portfolio(timestamp: datetime, price: float, xmr: float, usd: float) ->
     )
 
 
+def _target_xmr_share(recommendation: Recommendation) -> float:
+    """Derive a desired XMR weight based on the indicator pressures."""
+
+    total_pressure = recommendation.buy_pressure + recommendation.sell_pressure
+    if total_pressure <= 0.0:
+        return 0.5
+
+    bias_ratio = (
+        recommendation.buy_pressure - recommendation.sell_pressure
+    ) / total_pressure
+    dominant_pressure = max(recommendation.buy_pressure, recommendation.sell_pressure)
+    dominance_scale = min(max(dominant_pressure, 0.0) / 0.9, 1.0)
+    deviation = 0.4 * bias_ratio * dominance_scale
+    target_share = 0.5 + deviation
+    return min(max(target_share, 0.1), 0.9)
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -161,50 +178,65 @@ def main(argv: Iterable[str] | None = None) -> int:
         timestamp = latest_bar.date
 
         _log_portfolio(timestamp, price, xmr_balance, usd_balance)
+        target_xmr_share = _target_xmr_share(recommendation)
+        total_value = usd_balance + xmr_balance * price
+        current_xmr_share = 0.0 if total_value <= 0 else (xmr_balance * price) / total_value
+
         print(
-            f"Empfehlung: {recommendation.action} (Konfidenz {recommendation.confidence:.2f})",
+            "Empfehlung: "
+            f"{recommendation.action} (Konfidenz {recommendation.confidence:.2f}) | "
+            f"Ziel XMR-Anteil {target_xmr_share:.0%}",
             flush=True,
         )
 
-
-        effective_fraction = trade_fraction * recommendation.confidence
-        if recommendation.action == "Buy":
-            if usd_balance > 0 and effective_fraction > 0:
-                usd_to_spend = usd_balance * effective_fraction
-                xmr_purchased = usd_to_spend / price
-                xmr_balance += xmr_purchased
-                usd_balance -= usd_to_spend
-                print(
-                    " -> Kaufe "
-                    f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
-                    f"(Anteil {effective_fraction:.2%}).",
-                    flush=True,
-                )
-            else:
-                print(
-                    " -> Kein USD-Bestand oder zu geringe Konfidenz – kein Kauf.",
-                    flush=True,
-                )
-        elif recommendation.action == "Sell":
-            if xmr_balance > 0 and effective_fraction > 0:
-                xmr_to_sell = xmr_balance * effective_fraction
-                usd_gained = xmr_to_sell * price
-                xmr_balance -= xmr_to_sell
-                usd_balance += usd_gained
-                print(
-                    " -> Verkaufe "
-                    f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
-                    f"(Anteil {effective_fraction:.2%}).",
-                    flush=True,
-                )
-            else:
-                print(
-                    " -> Kein XMR-Bestand oder zu geringe Konfidenz – kein Verkauf.",
-                    flush=True,
-                )
-
+        if total_value <= 0:
+            print(" -> Kein Portfoliowert verfügbar – keine Umschichtung möglich.", flush=True)
         else:
-            print(" -> Halte Position, keine Aktion.", flush=True)
+            share_gap = target_xmr_share - current_xmr_share
+            max_share_change = trade_fraction * recommendation.confidence
+
+            if abs(share_gap) < 1e-4 or max_share_change <= 0:
+                print(" -> Halte Position, keine Aktion.", flush=True)
+            else:
+                share_change = max(-max_share_change, min(max_share_change, share_gap))
+                if share_change > 0:
+                    if usd_balance <= 0:
+                        print(" -> Kein USD-Bestand – kein Kauf.", flush=True)
+                    else:
+                        usd_to_spend = min(share_change * total_value, usd_balance)
+                        if usd_to_spend > 0:
+                            xmr_purchased = usd_to_spend / price
+                            xmr_balance += xmr_purchased
+                            usd_balance -= usd_to_spend
+                            actual_share = usd_to_spend / total_value
+                            print(
+                                " -> Kaufe "
+                                f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
+                                f"(Anteil {actual_share:.2%}).",
+                                flush=True,
+                            )
+                        else:
+                            print(" -> Zu wenig USD für eine Umschichtung.", flush=True)
+                elif share_change < 0:
+                    if xmr_balance <= 0:
+                        print(" -> Kein XMR-Bestand – kein Verkauf.", flush=True)
+                    else:
+                        xmr_to_sell = min((-share_change) * total_value / price, xmr_balance)
+                        if xmr_to_sell > 0:
+                            usd_gained = xmr_to_sell * price
+                            xmr_balance -= xmr_to_sell
+                            usd_balance += usd_gained
+                            actual_share = usd_gained / total_value
+                            print(
+                                " -> Verkaufe "
+                                f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
+                                f"(Anteil {actual_share:.2%}).",
+                                flush=True,
+                            )
+                        else:
+                            print(" -> Zu wenig XMR für eine Umschichtung.", flush=True)
+                else:
+                    print(" -> Halte Position, keine Aktion.", flush=True)
 
         print("-" * 80, flush=True)
 
