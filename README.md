@@ -74,9 +74,11 @@ python -m darkhorse.trader --interval 60 --iterations 5
 * `--history-limit` legt fest, wie viele Minutenkerzen zur Analyse geladen
   werden.
 
+
 > ⚠️ Bei aktivierter Simulation werden historische Tagesdaten auf eine
 > fiktive Minuten-Timeline gelegt. Die resultierenden Kurse dienen lediglich der
 > Demonstration und entsprechen nicht dem tatsächlichen Marktgeschehen.
+
 
 =======
 

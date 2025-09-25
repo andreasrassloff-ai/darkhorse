@@ -9,7 +9,9 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 from .defaults import DEFAULT_ASSET_NAME, DEFAULT_MINIMUM_HISTORY
+
 from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
+
 from .recommender import analyse_asset
 
 
@@ -91,6 +93,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
 
     history = []
+
     simulation_feed: SimulatedMoneroFeed | None = None
     simulation_active = False
     while True:
@@ -125,6 +128,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         if len(history) < args.min_history:
             print(
                 "Zu wenige Datenpunkte erhalten – warte auf mehr Daten...",
+
                 file=sys.stderr,
             )
             time.sleep(max(args.interval, 1.0))
