@@ -57,10 +57,12 @@ Verwendung des Namens `darkhorse` empfohlen.
 
 Wer statt historischer Daten den aktuellen Markt beobachten möchte, kann die
 Live-Demo starten. Sie lädt jede Minute aktuelle XMR/USD-Kurse von CoinGecko,
+
 wendet die Analyse darauf an und schichtet – abhängig von der ermittelten
 Konfidenz – nur einen Teil des Bestands zwischen XMR und USD um. So bleibt das
 Portfolio auch bei kurzzeitig ungünstigen Signalen robuster. Standardmäßig
 beginnt die Demo mit **1 XMR** und keinem USD.
+
 
 Sollte kein Internetzugang zur Verfügung stehen, simuliert die Demo automatisch
 synthetische Minutenkerzen auf Basis der mitgelieferten historischen Daten. So
@@ -68,7 +70,9 @@ bleibt das Skript funktionsfähig, selbst wenn die CoinGecko-API nicht erreichba
 ist.
 
 ```
+
 python -m darkhorse.trader --interval 60 --iterations 5 --trade-fraction 0.4
+
 ```
 
 * `--interval` steuert den Abstand zwischen zwei Trades (in Sekunden).
@@ -78,11 +82,13 @@ python -m darkhorse.trader --interval 60 --iterations 5 --trade-fraction 0.4
 * `--trade-fraction` begrenzt, welcher Anteil des Guthabens pro Zyklus bewegt
   werden darf.
 
+
 > ⚠️ Bei aktivierter Simulation werden historische Tagesdaten auf eine
 > fiktive Minuten-Timeline gelegt. Die resultierenden Kurse dienen lediglich der
 > Demonstration und entsprechen nicht dem tatsächlichen Marktgeschehen.
 
-=======
+
+
 
 ## Kommandozeilenoberfläche
 

@@ -1,4 +1,6 @@
+
 """Simple live trading demo that rebalances between Monero and USD each minute."""
+
 
 from __future__ import annotations
 
@@ -9,7 +11,9 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 from .defaults import DEFAULT_ASSET_NAME, DEFAULT_MINIMUM_HISTORY
+
 from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
+
 from .recommender import analyse_asset
 
 
@@ -17,8 +21,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Startet eine Demo, die jede Minute aktuelle Monero-Preise lädt, "
+
             "die Analyse ausführt und den Bestand anteilig zwischen XMR und "
             "USD umschichtet."
+
         )
     )
     parser.add_argument(
@@ -55,6 +61,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+
         "--iterations",
         type=int,
         default=0,
@@ -93,6 +100,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     xmr_balance = float(args.start_xmr)
     usd_balance = float(args.start_usd)
+
     trade_fraction = min(max(float(args.trade_fraction), 0.0), 1.0)
 
     iteration = 0
@@ -101,6 +109,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
 
     history = []
+
     simulation_feed: SimulatedMoneroFeed | None = None
     simulation_active = False
     while True:
@@ -135,6 +144,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         if len(history) < args.min_history:
             print(
                 "Zu wenige Datenpunkte erhalten – warte auf mehr Daten...",
+
                 file=sys.stderr,
             )
             time.sleep(max(args.interval, 1.0))
@@ -151,6 +161,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             f"Empfehlung: {recommendation.action} (Konfidenz {recommendation.confidence:.2f})",
             flush=True,
         )
+
 
         effective_fraction = trade_fraction * recommendation.confidence
         if recommendation.action == "Buy":
@@ -187,6 +198,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                     " -> Kein XMR-Bestand oder zu geringe Konfidenz – kein Verkauf.",
                     flush=True,
                 )
+
         else:
             print(" -> Halte Position, keine Aktion.", flush=True)
 

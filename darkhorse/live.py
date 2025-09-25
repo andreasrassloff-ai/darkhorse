@@ -1,3 +1,4 @@
+
 """Utilities to fetch live Monero pricing data from public APIs.
 
 In isolated environments without internet access the live API cannot be
@@ -11,12 +12,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
 from typing import Any, List
 from urllib.error import URLError, HTTPError
 from urllib.request import urlopen
 import json
 
 from .data import PriceBar, load_price_history
+
 
 # CoinGecko offers free access to market data without the need for API keys.
 # We rely on the minute resolution endpoint which returns up to 24 hours of
@@ -109,7 +112,6 @@ class SimulatedMoneroFeed:
         if len(self._history) > self._limit:
             self._history = self._history[-self._limit :]
         return list(self._history)
-
 
 def _fetch_json(url: str) -> Any:
     try:
