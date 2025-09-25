@@ -15,6 +15,8 @@ class Recommendation:
     action: str
     confidence: float
     reasons: list[str]
+    buy_pressure: float
+    sell_pressure: float
 
 
 def _format_percentage(value: float) -> str:
@@ -105,5 +107,10 @@ def analyse_asset(asset: str, history: Sequence[PriceBar]) -> Recommendation:
         )
 
     return Recommendation(
-        asset=asset, action=action, confidence=confidence, reasons=reasons
+        asset=asset,
+        action=action,
+        confidence=confidence,
+        reasons=reasons,
+        buy_pressure=buy_pressure,
+        sell_pressure=sell_pressure,
     )
