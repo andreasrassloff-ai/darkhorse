@@ -10,7 +10,11 @@ import time
 from datetime import datetime, timezone
 from typing import Iterable
 
-from .defaults import DEFAULT_ASSET_NAME, DEFAULT_MINIMUM_HISTORY
+from .defaults import (
+    DEFAULT_ASSET_NAME,
+    DEFAULT_MINIMUM_HISTORY,
+    DEFAULT_START_USD,
+)
 
 from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
 
@@ -79,7 +83,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--start-usd",
         type=float,
-        default=0.0,
+        default=DEFAULT_START_USD,
         help="Startbestand in USD. Standard: %(default)s.",
     )
     return parser
