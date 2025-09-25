@@ -334,10 +334,12 @@ def main(argv: Iterable[str] | None = None) -> int:
                             xmr_balance += xmr_purchased
                             usd_balance -= total_usd_spent
                             actual_share = total_usd_spent / total_value if total_value else 0.0
+
                             buy_count += 1
                             total_xmr_bought += xmr_purchased
                             total_usd_spent_with_fees += total_usd_spent
                             total_buy_fees += fee_paid
+
                             print(
                                 " -> Kaufe "
                                 f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
@@ -362,6 +364,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                             total_xmr_sold += xmr_to_sell
                             total_usd_gained_net += usd_gained
                             total_sell_fees += fee_paid
+
                             print(
                                 " -> Verkaufe "
                                 f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
