@@ -172,6 +172,47 @@ def _target_xmr_share(recommendation: Recommendation) -> float:
 
 
 
+def _print_trade_summary(
+    buy_count: int,
+    total_xmr_bought: float,
+    total_usd_spent_with_fees: float,
+    total_buy_fees: float,
+    sell_count: int,
+    total_xmr_sold: float,
+    total_usd_gained_net: float,
+    total_sell_fees: float,
+) -> None:
+    """Print a summary of executed trades and related fees."""
+
+    print("Zusammenfassung der Handelsvorgänge:", flush=True)
+    if buy_count == 0 and sell_count == 0:
+        print(" -> Keine Trades ausgeführt.", flush=True)
+        return
+
+    if buy_count:
+        print(
+            " -> Käufe: "
+            f"{buy_count} Trades, {total_xmr_bought:.6f} XMR erworben, "
+            f"{total_usd_spent_with_fees:.2f} USD eingesetzt (Gebühren {total_buy_fees:.2f} USD).",
+            flush=True,
+        )
+    else:
+        print(" -> Keine Käufe durchgeführt.", flush=True)
+
+    if sell_count:
+        print(
+            " -> Verkäufe: "
+            f"{sell_count} Trades, {total_xmr_sold:.6f} XMR verkauft, "
+            f"{total_usd_gained_net:.2f} USD erhalten (Gebühren {total_sell_fees:.2f} USD).",
+            flush=True,
+        )
+    else:
+        print(" -> Keine Verkäufe durchgeführt.", flush=True)
+
+    total_fees = total_buy_fees + total_sell_fees
+    print(f" -> Summe gezahlter Gebühren: {total_fees:.2f} USD.", flush=True)
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -193,6 +234,15 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     simulation_feed: SimulatedMoneroFeed | None = None
     simulation_active = False
+
+    buy_count = 0
+    total_xmr_bought = 0.0
+    total_usd_spent_with_fees = 0.0
+    total_buy_fees = 0.0
+    sell_count = 0
+    total_xmr_sold = 0.0
+    total_usd_gained_net = 0.0
+    total_sell_fees = 0.0
     while True:
         try:
             history = fetch_monero_minute_bars(args.history_limit)
@@ -284,6 +334,12 @@ def main(argv: Iterable[str] | None = None) -> int:
                             xmr_balance += xmr_purchased
                             usd_balance -= total_usd_spent
                             actual_share = total_usd_spent / total_value if total_value else 0.0
+
+                            buy_count += 1
+                            total_xmr_bought += xmr_purchased
+                            total_usd_spent_with_fees += total_usd_spent
+                            total_buy_fees += fee_paid
+
                             print(
                                 " -> Kaufe "
                                 f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
@@ -304,6 +360,11 @@ def main(argv: Iterable[str] | None = None) -> int:
                             xmr_balance -= xmr_to_sell
                             usd_balance += usd_gained
                             actual_share = usd_before_fee / total_value if total_value else 0.0
+                            sell_count += 1
+                            total_xmr_sold += xmr_to_sell
+                            total_usd_gained_net += usd_gained
+                            total_sell_fees += fee_paid
+
                             print(
                                 " -> Verkaufe "
                                 f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
@@ -324,6 +385,16 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if not history:
         print("Keine Kursdaten verfügbar – Demo wird beendet.")
+        _print_trade_summary(
+            buy_count,
+            total_xmr_bought,
+            total_usd_spent_with_fees,
+            total_buy_fees,
+            sell_count,
+            total_xmr_sold,
+            total_usd_gained_net,
+            total_sell_fees,
+        )
         return 1
 
     final_price = history[-1].close
@@ -338,6 +409,16 @@ def main(argv: Iterable[str] | None = None) -> int:
         xmr_balance,
         usd_balance,
         outperformance=final_outperformance,
+    )
+    _print_trade_summary(
+        buy_count,
+        total_xmr_bought,
+        total_usd_spent_with_fees,
+        total_buy_fees,
+        sell_count,
+        total_xmr_sold,
+        total_usd_gained_net,
+        total_sell_fees,
     )
     return 0
 
