@@ -42,14 +42,17 @@ Für die Analyse können WKNs direkt auf der Kommandozeile übergeben oder aus e
 **Direkte Angabe**
 
 ```
+
 python -m darkhorse.main --wkn US0378331005
+
 ```
 
 Optional lässt sich ein alternativer Pfad zur Kursdatei angeben:
 
 ```
+
 python -m darkhorse.main --wkn US0378331005=/pfad/zu/apple.json
-```
+
 
 **Watchlist-Dateien**
 
@@ -71,6 +74,7 @@ Watchlists sind JSON-Dateien, die entweder eine Liste oder ein Objekt enthalten 
 
 Relative Pfade werden relativ zum Speicherort der Watchlist aufgelöst.
 
+
 ## Schnellstart
 
 Für einen schnellen Start ohne weitere Parameter kann die Anwendung direkt
@@ -91,12 +95,16 @@ Projekt nun ein dünnes Kompatibilitätspaket bereit, das alle Funktionen an die
 neuen `darkhorse`-Module weiterreicht. Für neue Installationen wird dennoch die
 Verwendung des Namens `darkhorse` empfohlen.
 
+=======
+
 ## Kommandozeilenoberfläche
 
 Die CLI liest historische Daten ein, prüft ob genügend Historie vorliegt und gibt anschließend eine Empfehlung samt Begründung aus.
 
 ```
+
 python -m darkhorse.main --watchlist watchlists/beobachtungsliste.json --min-history 60
+
 ```
 
 Verfügbare Optionen:
@@ -112,7 +120,9 @@ Der Exit-Code ist `0` bei Erfolg und `1`, wenn eine oder mehrere WKNs nicht vera
 Der Webserver stellt dieselben Daten wie die CLI dar, jedoch in einer kartenbasierten Übersicht im Browser.
 
 ```
+
 python -m darkhorse.web --watchlist watchlists/beobachtungsliste.json --port 8000
+
 ```
 
 * Nach dem Start ist die Oberfläche unter `http://127.0.0.1:8000` erreichbar.
