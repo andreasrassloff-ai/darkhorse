@@ -14,6 +14,7 @@ from .defaults import (
     DEFAULT_ASSET_NAME,
     DEFAULT_MINIMUM_HISTORY,
     DEFAULT_START_USD,
+    DEFAULT_TRANSACTION_FEE_RATE,
 )
 
 from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
@@ -62,6 +63,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Maximaler Anteil des verfügbaren Kapitals, der pro Zyklus umgeschichtet "
             "werden darf (0–1, Standard: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+        "--fee-rate",
+        type=float,
+        default=DEFAULT_TRANSACTION_FEE_RATE,
+        help=(
+            "Anteil der KuCoin-Transaktionsgebühr pro Trade (z.B. 0.001 für 0,1 %, "
+            "Standard: %(default)s)."
         ),
     )
     parser.add_argument(
@@ -162,6 +172,47 @@ def _target_xmr_share(recommendation: Recommendation) -> float:
 
 
 
+def _print_trade_summary(
+    buy_count: int,
+    total_xmr_bought: float,
+    total_usd_spent_with_fees: float,
+    total_buy_fees: float,
+    sell_count: int,
+    total_xmr_sold: float,
+    total_usd_gained_net: float,
+    total_sell_fees: float,
+) -> None:
+    """Print a summary of executed trades and related fees."""
+
+    print("Zusammenfassung der Handelsvorgänge:", flush=True)
+    if buy_count == 0 and sell_count == 0:
+        print(" -> Keine Trades ausgeführt.", flush=True)
+        return
+
+    if buy_count:
+        print(
+            " -> Käufe: "
+            f"{buy_count} Trades, {total_xmr_bought:.6f} XMR erworben, "
+            f"{total_usd_spent_with_fees:.2f} USD eingesetzt (Gebühren {total_buy_fees:.2f} USD).",
+            flush=True,
+        )
+    else:
+        print(" -> Keine Käufe durchgeführt.", flush=True)
+
+    if sell_count:
+        print(
+            " -> Verkäufe: "
+            f"{sell_count} Trades, {total_xmr_sold:.6f} XMR verkauft, "
+            f"{total_usd_gained_net:.2f} USD erhalten (Gebühren {total_sell_fees:.2f} USD).",
+            flush=True,
+        )
+    else:
+        print(" -> Keine Verkäufe durchgeführt.", flush=True)
+
+    total_fees = total_buy_fees + total_sell_fees
+    print(f" -> Summe gezahlter Gebühren: {total_fees:.2f} USD.", flush=True)
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -170,6 +221,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     usd_balance = float(args.start_usd)
 
     trade_fraction = min(max(float(args.trade_fraction), 0.0), 1.0)
+    fee_rate = max(float(args.fee_rate), 0.0)
 
     iteration = 0
     print(
@@ -182,6 +234,15 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     simulation_feed: SimulatedMoneroFeed | None = None
     simulation_active = False
+
+    buy_count = 0
+    total_xmr_bought = 0.0
+    total_usd_spent_with_fees = 0.0
+    total_buy_fees = 0.0
+    sell_count = 0
+    total_xmr_sold = 0.0
+    total_usd_gained_net = 0.0
+    total_sell_fees = 0.0
     while True:
         try:
             history = fetch_monero_minute_bars(args.history_limit)
@@ -264,16 +325,23 @@ def main(argv: Iterable[str] | None = None) -> int:
                     if usd_balance <= 0:
                         print(" -> Kein USD-Bestand – kein Kauf.", flush=True)
                     else:
-                        usd_to_spend = min(share_change * total_value, usd_balance)
+                        max_affordable_trade = usd_balance / (1.0 + fee_rate)
+                        usd_to_spend = min(share_change * total_value, max_affordable_trade)
                         if usd_to_spend > 0:
+                            fee_paid = usd_to_spend * fee_rate
+                            total_usd_spent = usd_to_spend + fee_paid
                             xmr_purchased = usd_to_spend / price
                             xmr_balance += xmr_purchased
-                            usd_balance -= usd_to_spend
-                            actual_share = usd_to_spend / total_value
+                            usd_balance -= total_usd_spent
+                            actual_share = total_usd_spent / total_value if total_value else 0.0
+                            buy_count += 1
+                            total_xmr_bought += xmr_purchased
+                            total_usd_spent_with_fees += total_usd_spent
+                            total_buy_fees += fee_paid
                             print(
                                 " -> Kaufe "
                                 f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
-                                f"(Anteil {actual_share:.2%}).",
+                                f"(+ Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%}).",
                                 flush=True,
                             )
                         else:
@@ -284,14 +352,20 @@ def main(argv: Iterable[str] | None = None) -> int:
                     else:
                         xmr_to_sell = min((-share_change) * total_value / price, xmr_balance)
                         if xmr_to_sell > 0:
-                            usd_gained = xmr_to_sell * price
+                            usd_before_fee = xmr_to_sell * price
+                            fee_paid = usd_before_fee * fee_rate
+                            usd_gained = usd_before_fee - fee_paid
                             xmr_balance -= xmr_to_sell
                             usd_balance += usd_gained
-                            actual_share = usd_gained / total_value
+                            actual_share = usd_before_fee / total_value if total_value else 0.0
+                            sell_count += 1
+                            total_xmr_sold += xmr_to_sell
+                            total_usd_gained_net += usd_gained
+                            total_sell_fees += fee_paid
                             print(
                                 " -> Verkaufe "
                                 f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
-                                f"(Anteil {actual_share:.2%}).",
+                                f"(Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%}).",
                                 flush=True,
                             )
                         else:
@@ -308,6 +382,16 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if not history:
         print("Keine Kursdaten verfügbar – Demo wird beendet.")
+        _print_trade_summary(
+            buy_count,
+            total_xmr_bought,
+            total_usd_spent_with_fees,
+            total_buy_fees,
+            sell_count,
+            total_xmr_sold,
+            total_usd_gained_net,
+            total_sell_fees,
+        )
         return 1
 
     final_price = history[-1].close
@@ -322,6 +406,16 @@ def main(argv: Iterable[str] | None = None) -> int:
         xmr_balance,
         usd_balance,
         outperformance=final_outperformance,
+    )
+    _print_trade_summary(
+        buy_count,
+        total_xmr_bought,
+        total_usd_spent_with_fees,
+        total_buy_fees,
+        sell_count,
+        total_xmr_sold,
+        total_usd_gained_net,
+        total_sell_fees,
     )
     return 0
 
