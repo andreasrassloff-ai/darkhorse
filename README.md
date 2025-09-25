@@ -53,10 +53,27 @@ Projekt nun ein dünnes Kompatibilitätspaket bereit, das alle Funktionen an die
 neuen `darkhorse`-Module weiterreicht. Für neue Installationen wird dennoch die
 Verwendung des Namens `darkhorse` empfohlen.
 
+### KuCoin-Daten abrufen
+
+Für realistische Simulationen sowie als Grundlage für die Live-Demo können
+historische Kurse direkt von KuCoin geladen werden. Das Projekt liefert dazu den
+kleinen Helfer ``python -m darkhorse.kucoin``. Mit folgendem Befehl werden zum
+Beispiel zwei Jahre an 1-Stunden-Kerzen für das Handelspaar XMR/USDT in die
+Datei ``data/xmr-kucoin-1hour.json`` geschrieben:
+
+```
+python -m darkhorse.kucoin --years 2 --interval 1hour --output data/xmr-kucoin-1hour.json
+```
+
+Die erzeugte Datei kann sowohl mit ``--data`` an die CLI- und Web-Anwendungen
+übergeben als auch von der Live-Demo für Offline-Simulationen genutzt werden.
+Sollte kein Internetzugang vorhanden sein, bleibt weiterhin die mitgelieferte
+``data/monero.json`` als Fallback verfügbar.
+
 ### Live-Trading-Demo
 
 Wer statt historischer Daten den aktuellen Markt beobachten möchte, kann die
-Live-Demo starten. Sie lädt jede Minute aktuelle XMR/USD-Kurse von CoinGecko,
+Live-Demo starten. Sie lädt jede Minute aktuelle XMR/USD-Kurse von KuCoin,
 
 wendet die Analyse darauf an und schichtet – abhängig von der ermittelten
 Konfidenz – nur einen Teil des Bestands zwischen XMR und USD um. So bleibt das
@@ -65,9 +82,9 @@ beginnt die Demo mit **1 XMR** und keinem USD.
 
 
 Sollte kein Internetzugang zur Verfügung stehen, simuliert die Demo automatisch
-synthetische Minutenkerzen auf Basis der mitgelieferten historischen Daten. So
-bleibt das Skript funktionsfähig, selbst wenn die CoinGecko-API nicht erreichbar
-ist.
+synthetische Minutenkerzen auf Basis der KuCoin-Daten (sofern heruntergeladen)
+oder der mitgelieferten historischen Daten. So bleibt das Skript funktionsfähig,
+selbst wenn die KuCoin-API nicht erreichbar ist.
 
 ```
 
