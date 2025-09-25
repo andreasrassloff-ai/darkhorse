@@ -1,4 +1,6 @@
-"""Simple live trading demo that flips between Monero and USD each minute."""
+
+"""Simple live trading demo that rebalances between Monero and USD each minute."""
+
 
 from __future__ import annotations
 
@@ -19,8 +21,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Startet eine Demo, die jede Minute aktuelle Monero-Preise lädt, "
-            "die Analyse ausführt und basierend darauf komplett in XMR oder "
-            "USD wechselt."
+
+            "die Analyse ausführt und den Bestand anteilig zwischen XMR und "
+            "USD umschichtet."
+
         )
     )
     parser.add_argument(
@@ -48,6 +52,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Anzahl Sekunden zwischen zwei Trades (Standard: 60).",
     )
     parser.add_argument(
+        "--trade-fraction",
+        type=float,
+        default=0.4,
+        help=(
+            "Maximaler Anteil des verfügbaren Kapitals, der pro Zyklus umgeschichtet "
+            "werden darf (0–1, Standard: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+
         "--iterations",
         type=int,
         default=0,
@@ -87,9 +101,11 @@ def main(argv: Iterable[str] | None = None) -> int:
     xmr_balance = float(args.start_xmr)
     usd_balance = float(args.start_usd)
 
+    trade_fraction = min(max(float(args.trade_fraction), 0.0), 1.0)
+
     iteration = 0
     print(
-        "Starte Live-Demo: Wir handeln vollständig zwischen XMR und USD hin und her."
+        "Starte Live-Demo: Wir gewichten das Portfolio dynamisch zwischen XMR und USD neu."
     )
 
     history = []
@@ -146,28 +162,43 @@ def main(argv: Iterable[str] | None = None) -> int:
             flush=True,
         )
 
+
+        effective_fraction = trade_fraction * recommendation.confidence
         if recommendation.action == "Buy":
-            if usd_balance > 0:
-                xmr_purchased = usd_balance / price
+            if usd_balance > 0 and effective_fraction > 0:
+                usd_to_spend = usd_balance * effective_fraction
+                xmr_purchased = usd_to_spend / price
                 xmr_balance += xmr_purchased
+                usd_balance -= usd_to_spend
                 print(
-                    f" -> Kaufe {xmr_purchased:.6f} XMR zum Preis von {price:.2f} USD",
+                    " -> Kaufe "
+                    f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
+                    f"(Anteil {effective_fraction:.2%}).",
                     flush=True,
                 )
-                usd_balance = 0.0
             else:
-                print(" -> Kein USD-Bestand vorhanden – kein Kauf möglich.", flush=True)
+                print(
+                    " -> Kein USD-Bestand oder zu geringe Konfidenz – kein Kauf.",
+                    flush=True,
+                )
         elif recommendation.action == "Sell":
-            if xmr_balance > 0:
-                usd_gained = xmr_balance * price
+            if xmr_balance > 0 and effective_fraction > 0:
+                xmr_to_sell = xmr_balance * effective_fraction
+                usd_gained = xmr_to_sell * price
+                xmr_balance -= xmr_to_sell
                 usd_balance += usd_gained
                 print(
-                    f" -> Verkaufe {xmr_balance:.6f} XMR und erhalte {usd_gained:.2f} USD",
+                    " -> Verkaufe "
+                    f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
+                    f"(Anteil {effective_fraction:.2%}).",
                     flush=True,
                 )
-                xmr_balance = 0.0
             else:
-                print(" -> Kein XMR-Bestand vorhanden – kein Verkauf möglich.", flush=True)
+                print(
+                    " -> Kein XMR-Bestand oder zu geringe Konfidenz – kein Verkauf.",
+                    flush=True,
+                )
+
         else:
             print(" -> Halte Position, keine Aktion.", flush=True)
 
