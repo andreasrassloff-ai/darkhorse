@@ -1,10 +1,7 @@
-"""Compatibility wrapper exposing :mod:`darkhorse.main`."""
+"""Command line interface for the Darkhorse stock analysis toolkit."""
 
 from __future__ import annotations
 
-
-from darkhorse.main import *  # noqa: F401,F403
-=======
 import argparse
 import sys
 from pathlib import Path
@@ -94,8 +91,6 @@ def main(argv: Iterable[str] | None = None) -> int:
     return exit_code
 
 
-
 if __name__ == "__main__":
-    from darkhorse.main import main as _main
+    raise SystemExit(main())
 
-    raise SystemExit(_main())

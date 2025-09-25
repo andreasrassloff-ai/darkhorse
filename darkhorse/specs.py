@@ -1,10 +1,3 @@
-
-"""Compatibility wrapper exposing :mod:`darkhorse.specs`."""
-
-from __future__ import annotations
-
-from darkhorse.specs import *  # noqa: F401,F403
-=======
 """Utilities for parsing watchlists and WKN specifications."""
 
 from __future__ import annotations
@@ -88,4 +81,3 @@ def collect_specs(
             specs.append(parse_wkn_argument(spec))
 
     return specs
-
