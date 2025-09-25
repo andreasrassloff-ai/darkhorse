@@ -304,79 +304,65 @@ def main(argv: Iterable[str] | None = None) -> int:
         target_xmr_share = _target_xmr_share(recommendation)
         current_xmr_share = 0.0 if total_value <= 0 else (xmr_balance * price) / total_value
 
-        print(
-            "Empfehlung: "
-            f"{recommendation.action} (Konfidenz {recommendation.confidence:.2f}) | "
-            f"Ziel XMR-Anteil {target_xmr_share:.0%}",
-            flush=True,
-        )
+        trade_lines: list[str] = []
 
-        if total_value <= 0:
-            print(" -> Kein Portfoliowert verfügbar – keine Umschichtung möglich.", flush=True)
-        else:
+        if total_value > 0:
             share_gap = target_xmr_share - current_xmr_share
             max_share_change = trade_fraction * recommendation.confidence
 
-            if abs(share_gap) < 1e-4 or max_share_change <= 0:
-                print(" -> Halte Position, keine Aktion.", flush=True)
-            else:
+            if abs(share_gap) >= 1e-4 and max_share_change > 0:
                 share_change = max(-max_share_change, min(max_share_change, share_gap))
-                if share_change > 0:
-                    if usd_balance <= 0:
-                        print(" -> Kein USD-Bestand – kein Kauf.", flush=True)
-                    else:
-                        max_affordable_trade = usd_balance / (1.0 + fee_rate)
-                        usd_to_spend = min(share_change * total_value, max_affordable_trade)
-                        if usd_to_spend > 0:
-                            fee_paid = usd_to_spend * fee_rate
-                            total_usd_spent = usd_to_spend + fee_paid
-                            xmr_purchased = usd_to_spend / price
-                            xmr_balance += xmr_purchased
-                            usd_balance -= total_usd_spent
-                            actual_share = total_usd_spent / total_value if total_value else 0.0
+                if share_change > 0 and usd_balance > 0:
+                    max_affordable_trade = usd_balance / (1.0 + fee_rate)
+                    usd_to_spend = min(share_change * total_value, max_affordable_trade)
+                    if usd_to_spend > 0:
+                        fee_paid = usd_to_spend * fee_rate
+                        total_usd_spent = usd_to_spend + fee_paid
+                        xmr_purchased = usd_to_spend / price
+                        xmr_balance += xmr_purchased
+                        usd_balance -= total_usd_spent
+                        actual_share = total_usd_spent / total_value if total_value else 0.0
 
-                            buy_count += 1
-                            total_xmr_bought += xmr_purchased
-                            total_usd_spent_with_fees += total_usd_spent
-                            total_buy_fees += fee_paid
+                        buy_count += 1
+                        total_xmr_bought += xmr_purchased
+                        total_usd_spent_with_fees += total_usd_spent
+                        total_buy_fees += fee_paid
 
-                            print(
-                                " -> Kaufe "
-                                f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
-                                f"(+ Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%}).",
-                                flush=True,
-                            )
-                        else:
-                            print(" -> Zu wenig USD für eine Umschichtung.", flush=True)
-                elif share_change < 0:
-                    if xmr_balance <= 0:
-                        print(" -> Kein XMR-Bestand – kein Verkauf.", flush=True)
-                    else:
-                        xmr_to_sell = min((-share_change) * total_value / price, xmr_balance)
-                        if xmr_to_sell > 0:
-                            usd_before_fee = xmr_to_sell * price
-                            fee_paid = usd_before_fee * fee_rate
-                            usd_gained = usd_before_fee - fee_paid
-                            xmr_balance -= xmr_to_sell
-                            usd_balance += usd_gained
-                            actual_share = usd_before_fee / total_value if total_value else 0.0
-                            sell_count += 1
-                            total_xmr_sold += xmr_to_sell
-                            total_usd_gained_net += usd_gained
-                            total_sell_fees += fee_paid
+                        trade_lines.append(
+                            " -> Kaufe "
+                            f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
+                            f"(+ Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%})."
+                        )
+                elif share_change < 0 and xmr_balance > 0:
+                    xmr_to_sell = min((-share_change) * total_value / price, xmr_balance)
+                    if xmr_to_sell > 0:
+                        usd_before_fee = xmr_to_sell * price
+                        fee_paid = usd_before_fee * fee_rate
+                        usd_gained = usd_before_fee - fee_paid
+                        xmr_balance -= xmr_to_sell
+                        usd_balance += usd_gained
+                        actual_share = usd_before_fee / total_value if total_value else 0.0
+                        sell_count += 1
+                        total_xmr_sold += xmr_to_sell
+                        total_usd_gained_net += usd_gained
+                        total_sell_fees += fee_paid
 
-                            print(
-                                " -> Verkaufe "
-                                f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
-                                f"(Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%}).",
-                                flush=True,
-                            )
-                        else:
-                            print(" -> Zu wenig XMR für eine Umschichtung.", flush=True)
-                else:
-                    print(" -> Halte Position, keine Aktion.", flush=True)
+                        trade_lines.append(
+                            " -> Verkaufe "
+                            f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
+                            f"(Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%})."
+                        )
 
-        print("-" * 80, flush=True)
+        if trade_lines:
+            print(
+                "Empfehlung: "
+                f"{recommendation.action} (Konfidenz {recommendation.confidence:.2f}) | "
+                f"Ziel XMR-Anteil {target_xmr_share:.0%}",
+                flush=True,
+            )
+            for line in trade_lines:
+                print(line, flush=True)
+            print("-" * 80, flush=True)
 
         if args.iterations and iteration >= args.iterations:
             break
