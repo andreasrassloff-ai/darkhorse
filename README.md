@@ -78,7 +78,7 @@ Live-Demo starten. Sie lädt jede Minute aktuelle XMR/USD-Kurse von KuCoin,
 wendet die Analyse darauf an und schichtet – abhängig von der ermittelten
 Konfidenz – nur einen Teil des Bestands zwischen XMR und USD um. So bleibt das
 Portfolio auch bei kurzzeitig ungünstigen Signalen robuster. Standardmäßig
-beginnt die Demo mit **1 XMR** und keinem USD.
+beginnt die Demo mit **1 XMR** und **1000 USD** Startkapital.
 
 
 Sollte kein Internetzugang zur Verfügung stehen, simuliert die Demo automatisch
