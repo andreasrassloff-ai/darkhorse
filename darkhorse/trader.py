@@ -77,7 +77,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--start-xmr",
         type=float,
-        default=1.0,
+        default=0.8,
         help="Startbestand in Monero. Standard: %(default)s XMR.",
     )
     parser.add_argument(
@@ -143,6 +143,7 @@ def _target_xmr_share(recommendation: Recommendation) -> float:
     return min(max(target_share, 0.1), 0.9)
 
 
+
 def _target_xmr_share(recommendation: Recommendation) -> float:
     """Derive a desired XMR weight based on the indicator pressures."""
 
@@ -158,6 +159,7 @@ def _target_xmr_share(recommendation: Recommendation) -> float:
     deviation = 0.4 * bias_ratio * dominance_scale
     target_share = 0.5 + deviation
     return min(max(target_share, 0.1), 0.9)
+
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -223,7 +225,6 @@ def main(argv: Iterable[str] | None = None) -> int:
         latest_bar = history[-1]
         price = latest_bar.close
         timestamp = latest_bar.date
-
 
         total_value = usd_balance + xmr_balance * price
         if baseline_total_value is None or baseline_price is None:
