@@ -36,58 +36,68 @@ def analyse_asset(asset: str, history: Sequence[PriceBar]) -> Recommendation:
 
     action = "Hold"
     base_confidence = 0.2
+    buy_pressure = 0.0
+    sell_pressure = 0.0
 
     if short_sma is not None and long_sma is not None:
         delta = (short_sma - long_sma) / long_sma
+        magnitude = min(abs(delta), 0.4)
         if delta > 0:
-            action = "Buy"
+            buy_pressure += magnitude
             reasons.append(
                 "Der kurzfristige gleitende Durchschnitt liegt über dem langfristigen, "
                 "was auf einen Aufwärtstrend hindeutet."
             )
         elif delta < 0:
-            action = "Sell"
+            sell_pressure += magnitude
             reasons.append(
                 "Der kurzfristige gleitende Durchschnitt liegt unter dem langfristigen, "
                 "was auf nachlassende Dynamik deutet."
             )
-        base_confidence += min(abs(delta), 0.4)
 
     if roc is not None:
+        magnitude = min(abs(roc), 0.2)
         if roc > 0:
+            buy_pressure += magnitude
             reasons.append(
                 "Die letzten Schlusskurse steigen, die Dynamik ist positiv ("
                 + _format_percentage(roc)
                 + " in den letzten Tagen)."
             )
-            base_confidence += min(roc, 0.2)
-        else:
+        elif roc < 0:
+            sell_pressure += magnitude
             reasons.append(
                 "Die letzten Schlusskurse fallen, die Dynamik ist negativ ("
                 + _format_percentage(roc)
                 + " in den letzten Tagen)."
             )
-            base_confidence += min(abs(roc), 0.2)
-            if action == "Buy":
-                action = "Hold"
 
     if rsi is not None:
         if rsi > 70:
+            overbought_strength = min((rsi - 70) / 30, 0.3)
+            sell_pressure += overbought_strength
             reasons.append(
                 "Der RSI liegt über 70 und deutet auf eine überkaufte Situation hin."
             )
-            if action == "Buy":
-                action = "Hold"
         elif rsi < 30:
+            oversold_strength = min((30 - rsi) / 30, 0.3)
+            buy_pressure += oversold_strength
             reasons.append(
                 "Der RSI liegt unter 30 und weist auf eine überverkaufte Situation hin."
             )
-            if action == "Sell":
-                action = "Hold"
         else:
             reasons.append("Der RSI bewegt sich in einer neutralen Zone.")
 
-    confidence = min(max(base_confidence, 0.1), 0.95)
+    threshold = 0.05
+    if buy_pressure > sell_pressure + threshold:
+        action = "Buy"
+        confidence = min(base_confidence + buy_pressure, 0.95)
+    elif sell_pressure > buy_pressure + threshold:
+        action = "Sell"
+        confidence = min(base_confidence + sell_pressure, 0.95)
+    else:
+        action = "Hold"
+        confidence = min(base_confidence + max(buy_pressure, sell_pressure) / 2, 0.6)
 
     if not reasons:
         reasons.append(
