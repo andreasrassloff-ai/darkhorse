@@ -89,13 +89,58 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _log_portfolio(timestamp: datetime, price: float, xmr: float, usd: float) -> None:
+def _log_portfolio(
+    timestamp: datetime,
+    price: float,
+    xmr: float,
+    usd: float,
+    *,
+    outperformance: float | None = None,
+) -> None:
     total_value = usd + xmr * price
-    print(
+    message = (
         f"[{timestamp.isoformat()}] Preis: {price:.2f} USD | "
-        f"Bestand: {xmr:.6f} XMR / {usd:.2f} USD | Gesamtwert: {total_value:.2f} USD",
-        flush=True,
+        f"Bestand: {xmr:.6f} XMR / {usd:.2f} USD | Gesamtwert: {total_value:.2f} USD"
     )
+    if outperformance is not None:
+        message += f" | Outperformance vs. XMR: {outperformance:+.2%}"
+    print(message, flush=True)
+
+
+def _relative_outperformance(
+    total_value: float,
+    price: float,
+    baseline_total: float | None,
+    baseline_price: float | None,
+) -> float | None:
+    if (
+        baseline_total is None
+        or baseline_price is None
+        or baseline_total <= 0
+        or baseline_price <= 0
+    ):
+        return None
+
+    portfolio_return = total_value / baseline_total - 1.0
+    price_return = price / baseline_price - 1.0
+    return portfolio_return - price_return
+
+
+def _target_xmr_share(recommendation: Recommendation) -> float:
+    """Derive a desired XMR weight based on the indicator pressures."""
+
+    total_pressure = recommendation.buy_pressure + recommendation.sell_pressure
+    if total_pressure <= 0.0:
+        return 0.5
+
+    bias_ratio = (
+        recommendation.buy_pressure - recommendation.sell_pressure
+    ) / total_pressure
+    dominant_pressure = max(recommendation.buy_pressure, recommendation.sell_pressure)
+    dominance_scale = min(max(dominant_pressure, 0.0) / 0.9, 1.0)
+    deviation = 0.4 * bias_ratio * dominance_scale
+    target_share = 0.5 + deviation
+    return min(max(target_share, 0.1), 0.9)
 
 
 def _target_xmr_share(recommendation: Recommendation) -> float:
@@ -130,6 +175,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
 
     history = []
+    baseline_total_value: float | None = None
+    baseline_price: float | None = None
 
     simulation_feed: SimulatedMoneroFeed | None = None
     simulation_active = False
@@ -177,9 +224,22 @@ def main(argv: Iterable[str] | None = None) -> int:
         price = latest_bar.close
         timestamp = latest_bar.date
 
-        _log_portfolio(timestamp, price, xmr_balance, usd_balance)
-        target_xmr_share = _target_xmr_share(recommendation)
+
         total_value = usd_balance + xmr_balance * price
+        if baseline_total_value is None or baseline_price is None:
+            baseline_total_value = total_value
+            baseline_price = price
+        outperformance = _relative_outperformance(
+            total_value, price, baseline_total_value, baseline_price
+        )
+        _log_portfolio(
+            timestamp,
+            price,
+            xmr_balance,
+            usd_balance,
+            outperformance=outperformance,
+        )
+        target_xmr_share = _target_xmr_share(recommendation)
         current_xmr_share = 0.0 if total_value <= 0 else (xmr_balance * price) / total_value
 
         print(
@@ -251,7 +311,17 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     final_price = history[-1].close
     print("Endstand der Demo:")
-    _log_portfolio(datetime.now(timezone.utc), final_price, xmr_balance, usd_balance)
+    final_total = usd_balance + xmr_balance * final_price
+    final_outperformance = _relative_outperformance(
+        final_total, final_price, baseline_total_value, baseline_price
+    )
+    _log_portfolio(
+        datetime.now(timezone.utc),
+        final_price,
+        xmr_balance,
+        usd_balance,
+        outperformance=final_outperformance,
+    )
     return 0
 
 
