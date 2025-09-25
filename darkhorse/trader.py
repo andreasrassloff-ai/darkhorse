@@ -22,6 +22,11 @@ from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
 from .recommender import Recommendation, analyse_asset
 
 
+# Minimum trade sizes to avoid tiny transactions that are dominated by fees.
+MIN_ABSOLUTE_TRADE_VALUE_USD = 10.0
+MIN_RELATIVE_TRADE_SHARE = 0.10
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -288,6 +293,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         timestamp = latest_bar.date
 
         total_value = usd_balance + xmr_balance * price
+        min_trade_value = max(price * MIN_RELATIVE_TRADE_SHARE, MIN_ABSOLUTE_TRADE_VALUE_USD)
         if baseline_total_value is None or baseline_price is None:
             baseline_total_value = total_value
             baseline_price = price
@@ -315,7 +321,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 if share_change > 0 and usd_balance > 0:
                     max_affordable_trade = usd_balance / (1.0 + fee_rate)
                     usd_to_spend = min(share_change * total_value, max_affordable_trade)
-                    if usd_to_spend > 0:
+                    if usd_to_spend >= min_trade_value:
                         fee_paid = usd_to_spend * fee_rate
                         total_usd_spent = usd_to_spend + fee_paid
                         xmr_purchased = usd_to_spend / price
@@ -333,25 +339,38 @@ def main(argv: Iterable[str] | None = None) -> int:
                             f"{xmr_purchased:.6f} XMR für {usd_to_spend:.2f} USD "
                             f"(+ Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%})."
                         )
+                    elif usd_to_spend > 0:
+                        trade_lines.append(
+                            " -> Kauf übersprungen: geplanter Betrag "
+                            f"{usd_to_spend:.2f} USD unterschreitet das Mindestvolumen "
+                            f"von {min_trade_value:.2f} USD."
+                        )
                 elif share_change < 0 and xmr_balance > 0:
                     xmr_to_sell = min((-share_change) * total_value / price, xmr_balance)
                     if xmr_to_sell > 0:
                         usd_before_fee = xmr_to_sell * price
-                        fee_paid = usd_before_fee * fee_rate
-                        usd_gained = usd_before_fee - fee_paid
-                        xmr_balance -= xmr_to_sell
-                        usd_balance += usd_gained
-                        actual_share = usd_before_fee / total_value if total_value else 0.0
-                        sell_count += 1
-                        total_xmr_sold += xmr_to_sell
-                        total_usd_gained_net += usd_gained
-                        total_sell_fees += fee_paid
+                        if usd_before_fee < min_trade_value:
+                            trade_lines.append(
+                                " -> Verkauf übersprungen: geplanter Erlös "
+                                f"{usd_before_fee:.2f} USD unterschreitet das Mindestvolumen "
+                                f"von {min_trade_value:.2f} USD."
+                            )
+                        else:
+                            fee_paid = usd_before_fee * fee_rate
+                            usd_gained = usd_before_fee - fee_paid
+                            xmr_balance -= xmr_to_sell
+                            usd_balance += usd_gained
+                            actual_share = usd_before_fee / total_value if total_value else 0.0
+                            sell_count += 1
+                            total_xmr_sold += xmr_to_sell
+                            total_usd_gained_net += usd_gained
+                            total_sell_fees += fee_paid
 
-                        trade_lines.append(
-                            " -> Verkaufe "
-                            f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
-                            f"(Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%})."
-                        )
+                            trade_lines.append(
+                                " -> Verkaufe "
+                                f"{xmr_to_sell:.6f} XMR und erhalte {usd_gained:.2f} USD "
+                                f"(Gebühr {fee_paid:.2f} USD, Anteil {actual_share:.2%})."
+                            )
 
         if trade_lines:
             print(
