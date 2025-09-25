@@ -60,6 +60,11 @@ Live-Demo starten. Sie lädt jede Minute aktuelle XMR/USD-Kurse von CoinGecko,
 wendet die Analyse darauf an und tauscht den kompletten Bestand zwischen XMR und
 USD hin und her. Standardmäßig beginnt die Demo mit **1 XMR** und keinem USD.
 
+Sollte kein Internetzugang zur Verfügung stehen, simuliert die Demo automatisch
+synthetische Minutenkerzen auf Basis der mitgelieferten historischen Daten. So
+bleibt das Skript funktionsfähig, selbst wenn die CoinGecko-API nicht erreichbar
+ist.
+
 ```
 python -m darkhorse.trader --interval 60 --iterations 5
 ```
@@ -69,9 +74,11 @@ python -m darkhorse.trader --interval 60 --iterations 5
 * `--history-limit` legt fest, wie viele Minutenkerzen zur Analyse geladen
   werden.
 
-> ⚠️ Für die Live-Demo ist ein Internetzugang erforderlich. Bei kurzfristigen
-> API-Ausfällen überspringt das Skript die betroffene Runde und versucht es eine
-> Minute später erneut.
+
+> ⚠️ Bei aktivierter Simulation werden historische Tagesdaten auf eine
+> fiktive Minuten-Timeline gelegt. Die resultierenden Kurse dienen lediglich der
+> Demonstration und entsprechen nicht dem tatsächlichen Marktgeschehen.
+
 
 =======
 

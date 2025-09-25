@@ -9,7 +9,9 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 from .defaults import DEFAULT_ASSET_NAME, DEFAULT_MINIMUM_HISTORY
-from .live import LiveDataError, fetch_monero_minute_bars
+
+from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
+
 from .recommender import analyse_asset
 
 
@@ -91,17 +93,42 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
 
     history = []
+
+    simulation_feed: SimulatedMoneroFeed | None = None
+    simulation_active = False
     while True:
         try:
             history = fetch_monero_minute_bars(args.history_limit)
+            if simulation_active:
+                print(
+                    "Live-Daten wieder verfügbar – beende Simulation.",
+                    file=sys.stderr,
+                )
+            simulation_feed = None
+            simulation_active = False
         except LiveDataError as exc:
-            print(f"Fehler beim Laden der Live-Daten: {exc}", file=sys.stderr)
-            time.sleep(max(args.interval, 1.0))
-            continue
+            if simulation_feed is None:
+                try:
+                    simulation_feed = SimulatedMoneroFeed(args.history_limit)
+                except LiveDataError as sim_exc:
+                    print(
+                        "Fehler beim Laden der Live-Daten: "
+                        f"{exc}. Simulation ebenfalls nicht möglich: {sim_exc}",
+                        file=sys.stderr,
+                    )
+                    time.sleep(max(args.interval, 1.0))
+                    continue
+                print(
+                    "Live-Daten nicht verfügbar – verwende historische Daten zur Simulation.",
+                    file=sys.stderr,
+                )
+            history = simulation_feed.next_bars()
+            simulation_active = True
 
         if len(history) < args.min_history:
             print(
-                "Zu wenige Datenpunkte von der API erhalten – warte auf mehr Daten...",
+                "Zu wenige Datenpunkte erhalten – warte auf mehr Daten...",
+
                 file=sys.stderr,
             )
             time.sleep(max(args.interval, 1.0))
