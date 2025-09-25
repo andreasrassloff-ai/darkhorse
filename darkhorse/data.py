@@ -1,4 +1,4 @@
-"""Utilities for loading historical price data for stocks.
+"""Utilities for loading historical price data for assets like Monero.
 
 The application expects JSON files that contain either a list of candle
 objects or a mapping with the key ``"prices"`` whose value is that list. Each
