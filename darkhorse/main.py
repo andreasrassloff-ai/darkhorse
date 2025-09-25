@@ -1,96 +1,74 @@
-"""Command line interface for the Darkhorse stock analysis toolkit."""
+"""Command line interface for the Darkhorse Monero analysis toolkit."""
 
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable
 
 from .data import load_price_history, most_recent_date, validate_enough_data
-from .recommender import analyse_stock
-from .specs import collect_specs
+from .defaults import DEFAULT_ASSET_NAME, DEFAULT_DATA_PATH, DEFAULT_MINIMUM_HISTORY
+from .recommender import analyse_asset
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Liest historische Kursdaten ein und erstellt einfache Kauf-, "
+            "Analysiert historische Monero-Kursdaten und erstellt einfache Kauf-, "
             "Verkaufs- oder Halteempfehlungen."
         )
     )
     parser.add_argument(
-        "--wkn",
-        action="append",
-        help=(
-            "Wertpapierkennnummer mit optionalem Pfad zur JSON-Datei. "
-            "Beispiel: DE0001234567=data/meine_daten.json. Ohne Pfad wird"
-            " data/<WKN>.json erwartet."
-        ),
-    )
-    parser.add_argument(
-        "--watchlist",
+        "--data",
         type=Path,
+        default=DEFAULT_DATA_PATH,
         help=(
-            "Pfad zu einer JSON-Datei mit mehreren WKN-Einträgen. Einträge "
-            "können als Liste von Strings oder Objekten mit den Schlüsseln "
-            "'wkn' und optional 'path' angegeben werden."
+            "Pfad zur JSON-Datei mit Monero-Kursen. "
+            "Standard ist data/monero.json."
         ),
     )
     parser.add_argument(
         "--min-history",
         type=int,
-        default=60,
+        default=DEFAULT_MINIMUM_HISTORY,
         help="Minimale Anzahl an Handelstagen für eine Auswertung (Standard: 60).",
     )
     return parser
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
     try:
-        specs = collect_specs(args.wkn, args.watchlist)
+        history = load_price_history(args.data)
     except FileNotFoundError:
-        parser.error(f"Watchlist-Datei {args.watchlist} wurde nicht gefunden.")
+        parser.error(f"Kursdatei {args.data} wurde nicht gefunden.")
     except ValueError as exc:
         parser.error(str(exc))
-    if not specs:
-        parser.error(
-            "Es wurde keine WKN angegeben. Verwenden Sie --wkn oder --watchlist."
-        )
 
-    exit_code = 0
-    errors: list[str] = []
-    for wkn, path in specs:
-        try:
-            history = load_price_history(path)
-            validate_enough_data(history, args.min_history)
-            recommendation = analyse_stock(wkn, history)
-        except FileNotFoundError:
-            errors.append(
-                f"{wkn}: Keine Kursdaten gefunden – erwartete Datei {path}"
-            )
-        except ValueError as exc:
-            errors.append(f"{wkn}: {exc}")
-        else:
-            latest_date = most_recent_date(history)
-            print("=" * 60)
-            print(f"Analyse für {wkn}")
-            if latest_date is not None:
-                print(f"Letzter Handelstag: {latest_date.date().isoformat()}")
-            print(f"Empfehlung: {recommendation.action} (Konfidenz {recommendation.confidence:.2f})")
-            print("Begründungen:")
-            for reason in recommendation.reasons:
-                print(f"  - {reason}")
+    try:
+        validate_enough_data(history, args.min_history)
+    except ValueError as exc:
+        parser.error(str(exc))
 
-    if errors:
-        exit_code = 1
-        for message in errors:
-            print(message, file=sys.stderr)
+    recommendation = analyse_asset(DEFAULT_ASSET_NAME, history)
+    latest_date = most_recent_date(history)
 
-    return exit_code
+    print("=" * 60)
+    print(f"Analyse für {DEFAULT_ASSET_NAME}")
+    if latest_date is not None:
+        print(f"Letzter Handelstag: {latest_date.date().isoformat()}")
+    print(
+        "Empfehlung: "
+        f"{recommendation.action} (Konfidenz {recommendation.confidence:.2f})"
+    )
+    print("Begründungen:")
+    for reason in recommendation.reasons:
+        print(f"  - {reason}")
+
+    return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

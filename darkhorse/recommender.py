@@ -11,7 +11,7 @@ from .data import PriceBar, closing_prices
 
 @dataclass(frozen=True)
 class Recommendation:
-    wkn: str
+    asset: str
     action: str
     confidence: float
     reasons: list[str]
@@ -21,7 +21,7 @@ def _format_percentage(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
-def analyse_stock(wkn: str, history: Sequence[PriceBar]) -> Recommendation:
+def analyse_asset(asset: str, history: Sequence[PriceBar]) -> Recommendation:
     prices = closing_prices(history)
     reasons: list[str] = []
 
@@ -56,14 +56,16 @@ def analyse_stock(wkn: str, history: Sequence[PriceBar]) -> Recommendation:
     if roc is not None:
         if roc > 0:
             reasons.append(
-                "Die letzten Schlusskurse steigen, die Dynamik ist positiv (" +
-                _format_percentage(roc) + " in den letzten Tagen)."
+                "Die letzten Schlusskurse steigen, die Dynamik ist positiv ("
+                + _format_percentage(roc)
+                + " in den letzten Tagen)."
             )
             base_confidence += min(roc, 0.2)
         else:
             reasons.append(
-                "Die letzten Schlusskurse fallen, die Dynamik ist negativ (" +
-                _format_percentage(roc) + " in den letzten Tagen)."
+                "Die letzten Schlusskurse fallen, die Dynamik ist negativ ("
+                + _format_percentage(roc)
+                + " in den letzten Tagen)."
             )
             base_confidence += min(abs(roc), 0.2)
             if action == "Buy":
@@ -92,5 +94,6 @@ def analyse_stock(wkn: str, history: Sequence[PriceBar]) -> Recommendation:
             "Nicht genügend Daten für eine klare Aussage – daher neutrale Empfehlung."
         )
 
-    return Recommendation(wkn=wkn, action=action, confidence=confidence, reasons=reasons)
-
+    return Recommendation(
+        asset=asset, action=action, confidence=confidence, reasons=reasons
+    )

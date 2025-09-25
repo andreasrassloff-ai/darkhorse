@@ -1,6 +1,6 @@
-# Darkhorse Aktienanalyse
+# Darkhorse Monero-Analyse
 
-Dieses Projekt analysiert historische Kursdaten und erstellt einfache Kauf-, Verkaufs- oder Halteempfehlungen. Neben einer Kommandozeilenoberfläche steht ein kleiner WSGI-Webserver zur Verfügung, der die Ergebnisse im Browser visualisiert.
+Dieses Projekt analysiert historische Monero-Kurse und erstellt einfache Kauf-, Verkaufs- oder Halteempfehlungen. Neben einer Kommandozeilenoberfläche steht ein kleiner WSGI-Webserver zur Verfügung, der die Ergebnisse im Browser visualisiert.
 
 ## Voraussetzungen
 
@@ -11,7 +11,7 @@ Alle Abhängigkeiten befinden sich in der Standardbibliothek, es muss daher nich
 
 ## Datenformat
 
-Die Anwendung erwartet für jede WKN eine JSON-Datei mit historischen Kursen.
+Die Anwendung erwartet eine JSON-Datei mit historischen Monero-Kursen.
 
 ```json
 {
@@ -33,54 +33,12 @@ Die Anwendung erwartet für jede WKN eine JSON-Datei mit historischen Kursen.
 * `open`, `high`, `low` und `close` sind Pflichtfelder.
 * `volume` ist optional und kann weggelassen oder als `null` angegeben werden.
 
-Standardmäßig sucht die Anwendung Kursdaten in `data/<WKN>.json`.
-
-## Watchlists und WKN-Angaben
-
-Für die Analyse können WKNs direkt auf der Kommandozeile übergeben oder aus einer Watchlist geladen werden.
-
-**Direkte Angabe**
-
-```
-
-python -m darkhorse.main --wkn US0378331005
-
-```
-
-Optional lässt sich ein alternativer Pfad zur Kursdatei angeben:
-
-```
-
-python -m darkhorse.main --wkn US0378331005=/pfad/zu/apple.json
-
-
-**Watchlist-Dateien**
-
-Watchlists sind JSON-Dateien, die entweder eine Liste oder ein Objekt enthalten dürfen:
-
-```json
-[
-  "US0378331005",
-  { "wkn": "DE0007664039", "path": "../daten/vw.json" }
-]
-```
-
-```json
-{
-  "US0378331005": null,
-  "DE0007664039": "../daten/vw.json"
-}
-```
-
-Relative Pfade werden relativ zum Speicherort der Watchlist aufgelöst.
-
+Standardmäßig sucht die Anwendung Kursdaten in `data/monero.json`.
 
 ## Schnellstart
 
 Für einen schnellen Start ohne weitere Parameter kann die Anwendung direkt
-gestartet werden. Dabei wird die Standard-Watchlist aus
-`watchlists/beobachtungsliste.json` geladen und die Weboberfläche auf Port 8000
-bereitgestellt:
+gestartet werden. Dabei wird die Standarddatei `data/monero.json` geladen und die Weboberfläche auf Port 8000 bereitgestellt:
 
 ```
 python -m darkhorse
@@ -103,17 +61,16 @@ Die CLI liest historische Daten ein, prüft ob genügend Historie vorliegt und g
 
 ```
 
-python -m darkhorse.main --watchlist watchlists/beobachtungsliste.json --min-history 60
+python -m darkhorse.main --data data/monero.json --min-history 60
 
 ```
 
 Verfügbare Optionen:
 
-* `--wkn`: WKN mit optionalem Pfad zur Kursdatei (`WKN=pfad`). Kann mehrfach angegeben werden.
-* `--watchlist`: Pfad zu einer JSON-Watchlist.
+* `--data`: Pfad zur JSON-Datei mit Monero-Kursen (Standard `data/monero.json`).
 * `--min-history`: Minimale Anzahl an Handelstagen (Standard 60).
 
-Der Exit-Code ist `0` bei Erfolg und `1`, wenn eine oder mehrere WKNs nicht verarbeitet werden konnten.
+Der Exit-Code ist `0` bei Erfolg und `2`, wenn die Eingabeparameter ungültig sind (z. B. Datei nicht gefunden).
 
 ## Weboberfläche
 
@@ -121,17 +78,16 @@ Der Webserver stellt dieselben Daten wie die CLI dar, jedoch in einer kartenbasi
 
 ```
 
-python -m darkhorse.web --watchlist watchlists/beobachtungsliste.json --port 8000
+python -m darkhorse.web --data data/monero.json --port 8000
 
 ```
 
 * Nach dem Start ist die Oberfläche unter `http://127.0.0.1:8000` erreichbar.
-* Weitere WKNs können per Query-Parameter hinzugefügt werden, z. B. `http://127.0.0.1:8000/?wkn=US0378331005`.
 * Mit `Strg+C` wird der Server beendet.
 
 ## Beispiel-Daten
 
-Im Ordner `data/` befindet sich eine Beispiel-Datei (`US0378331005.json`) für Apple. `watchlists/beobachtungsliste.json` zeigt die erlaubten Watchlist-Formate.
+Im Ordner `data/` befindet sich eine Beispiel-Datei (`monero.json`) mit fiktiven Monero-Kursen.
 
 ## Entwicklung & Tests
 
