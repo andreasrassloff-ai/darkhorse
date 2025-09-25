@@ -86,6 +86,11 @@ python -m darkhorse
 > Namen `app`, wodurch `python -m app` auf manchen Systemen scheitert. Der
 > Paketname des Projekts lautet deshalb `darkhorse`.
 
+Falls bestehende Skripte weiterhin `python -m app` verwenden, stellt das
+Projekt nun ein dünnes Kompatibilitätspaket bereit, das alle Funktionen an die
+neuen `darkhorse`-Module weiterreicht. Für neue Installationen wird dennoch die
+Verwendung des Namens `darkhorse` empfohlen.
+
 ## Kommandozeilenoberfläche
 
 Die CLI liest historische Daten ein, prüft ob genügend Historie vorliegt und gibt anschließend eine Empfehlung samt Begründung aus.
