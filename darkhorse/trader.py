@@ -143,6 +143,25 @@ def _target_xmr_share(recommendation: Recommendation) -> float:
     return min(max(target_share, 0.1), 0.9)
 
 
+
+def _target_xmr_share(recommendation: Recommendation) -> float:
+    """Derive a desired XMR weight based on the indicator pressures."""
+
+    total_pressure = recommendation.buy_pressure + recommendation.sell_pressure
+    if total_pressure <= 0.0:
+        return 0.5
+
+    bias_ratio = (
+        recommendation.buy_pressure - recommendation.sell_pressure
+    ) / total_pressure
+    dominant_pressure = max(recommendation.buy_pressure, recommendation.sell_pressure)
+    dominance_scale = min(max(dominant_pressure, 0.0) / 0.9, 1.0)
+    deviation = 0.4 * bias_ratio * dominance_scale
+    target_share = 0.5 + deviation
+    return min(max(target_share, 0.1), 0.9)
+
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)

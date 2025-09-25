@@ -81,6 +81,7 @@ Portfolio auch bei kurzzeitig ungünstigen Signalen robuster. Standardmäßig
 beginnt die Demo mit **0,8 XMR** und **0 USD** Startkapital.
 
 
+
 Sollte kein Internetzugang zur Verfügung stehen, simuliert die Demo automatisch
 synthetische Minutenkerzen auf Basis der KuCoin-Daten (sofern heruntergeladen)
 oder der mitgelieferten historischen Daten. So bleibt das Skript funktionsfähig,
