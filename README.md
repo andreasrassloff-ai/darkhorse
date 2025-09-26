@@ -147,3 +147,25 @@ Im Ordner `data/` befindet sich eine Beispiel-Datei (`monero.json`) mit fiktiven
 ## Entwicklung & Tests
 
 Für manuelle Tests können Sie die oben genannten Befehle verwenden. Automatisierte Tests sind momentan nicht eingerichtet.
+
+## Einsatz auf dem Raspberry Pi
+
+Mit `python -m darkhorse.pi` steht ein kleines Dienstprogramm bereit, das den
+Webserver mit für den Raspberry Pi sinnvollen Standardwerten startet. Es bindet
+standardmäßig an `0.0.0.0`, nutzt Port `8080` und legt die Daten im Verzeichnis
+`~/.local/share/darkhorse/` ab.
+
+```bash
+python -m darkhorse.pi --init-data
+```
+
+* `--init-data` kopiert die mitgelieferte Beispieldatei (`data/monero.json`) an
+  den Zielort, sofern dort noch keine Daten liegen. Mit `--force-data` lässt
+  sich das Überschreiben erzwingen.
+* `--print-systemd` gibt eine Beispiel-Unit aus, die sich nach dem Kopieren nach
+  `/etc/systemd/system/darkhorse.service` aktivieren lässt (`systemctl enable --now
+  darkhorse`). Die Unit nutzt den aufrufenden Benutzer sowie das aktuelle
+  Arbeitsverzeichnis.
+
+So lässt sich die App als dauerhafter Dienst auf einem Raspberry Pi betreiben,
+der die Weboberfläche im Heimnetz zur Verfügung stellt.

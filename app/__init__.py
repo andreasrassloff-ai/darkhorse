@@ -7,6 +7,7 @@ __all__ = [
     "defaults",
     "indicators",
     "main",
+    "pi",
     "recommender",
     "specs",
     "web",
