@@ -16,6 +16,7 @@ from .defaults import (
     DEFAULT_START_USD,
     DEFAULT_TRANSACTION_FEE_RATE,
 )
+from . import playbooks
 
 from .live import LiveDataError, SimulatedMoneroFeed, fetch_monero_minute_bars
 
@@ -100,6 +101,14 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=DEFAULT_START_USD,
         help="Startbestand in USD. Standard: %(default)s.",
+    )
+    parser.add_argument(
+        "--show-playbooks",
+        action="store_true",
+        help=(
+            "Zeigt praxistaugliche Parameter-Sets und Risiko-Richtlinien für das"
+            " XMR/USDT-Daytrading an und beendet das Programm."
+        ),
     )
     return parser
 
@@ -221,6 +230,10 @@ def _print_trade_summary(
 def main(argv: Iterable[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
+
+    if getattr(args, "show_playbooks", False):
+        playbooks.print_guidelines()
+        return 0
 
     xmr_balance = float(args.start_xmr)
     usd_balance = float(args.start_usd)

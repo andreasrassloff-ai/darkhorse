@@ -99,6 +99,8 @@ python -m darkhorse.trader --interval 60 --iterations 5 --trade-fraction 0.4
   werden.
 * `--trade-fraction` begrenzt, welcher Anteil des Guthabens pro Zyklus bewegt
   werden darf.
+* `--show-playbooks` gibt praxisnahe Parameter-Sets inklusive Risiko- und
+  Backtesting-Richtlinien für XMR/USDT-Daytrading aus und beendet das Programm.
 
 
 > ⚠️ Bei aktivierter Simulation werden historische Tagesdaten auf eine
